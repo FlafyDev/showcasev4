@@ -1,0 +1,38 @@
+{
+  "geode": "5.8.2",
+  "gd": { "win": "2.2081" },
+  "id": "flafy.showcase",
+  "name": "Showcase",
+  "version": "4.0.0",
+  "developers": ["Flafy"],
+  "description": "Watch verified completions and automatically submit your own successful runs.",
+  "dependencies": {
+		"geode.node-ids": ">=v1.23.3"
+	},
+  "links": {
+    "source": "https://github.com/FlafyDev/showcasev4"
+  },
+  "settings": {
+    "auto-submit": {
+      "name": "Submit completed runs",
+      "description": "Automatically upload completed runs to Showcase.",
+      "type": "bool",
+      "default": true
+    },
+    "share-attempts": {
+      "name": "Attempt activity",
+      "description": "Share where attempts begin and end.",
+      "type": "bool",
+      "default": true
+    }
+  },
+  "tags": ["gameplay", "utility", "online"],
+  "resources": {
+    "sprites": [
+      "resources/clapper.png",
+      "resources/ghost_badge.png",
+      "resources/inputs_badge.png",
+      "resources/play_badge.png"
+    ]
+  }
+}
