@@ -25,6 +25,7 @@ class Client {
   arc::Future<geode::Result<>> submit(std::string hash, geode::ByteVector replay);
   arc::Future<geode::Result<>> vote(std::string hash, std::string replayID, int value);
   arc::Future<geode::Result<>> report(Report report);
+  arc::Future<geode::Result<>> crashReport(std::string revision, std::string log);
 
  private:
   Client() = default;

@@ -19,3 +19,4 @@ Interact with the mod through the **Showcase button** added to non-platformer us
 - Users are automatically authenticated through Argon's official server (same as in Globed)
 - Non-practice, non-platformer user level completions are uploaded to Showcase (can opt out)
 - Records where attempts begin and end and how they ended (can opt out)
+- Crash logs related to Showcase are reported (can opt out)

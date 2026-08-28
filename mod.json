@@ -24,6 +24,12 @@
       "description": "Share where attempts begin and end.",
       "type": "bool",
       "default": true
+    },
+    "share-crash-logs": {
+      "name": "Share crash logs",
+      "description": "Automatically upload crash logs related to Showcase.",
+      "type": "bool",
+      "default": true
     }
   },
   "tags": ["gameplay", "utility", "online"],

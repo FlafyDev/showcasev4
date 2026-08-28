@@ -206,4 +206,14 @@ arc::Future<Result<>> Client::report(Report report) {
   co_return expectSuccess(response);
 }
 
+arc::Future<Result<>> Client::crashReport(std::string revision, std::string log) {
+  auto response = co_await request()
+                    .bodyJSON(matjson::makeObject({
+                      {"mod_revision", std::move(revision)},
+                      {"log", std::move(log)},
+                    }))
+                    .post(std::string(origin) + "/v4/crash-reports");
+  co_return expectSuccess(response);
+}
+
 }
