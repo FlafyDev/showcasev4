@@ -305,7 +305,7 @@ CCNode* ReplayPopupView::buildControls(CCSize size) {
   recordMenu->setPosition({128.f - 8.f, 8.f});
   ButtonSprite* recordFace = nullptr;
   auto recordButton = CCMenuItemSpriteExtra::create(
-    tabFace("RECORD", 50.f, false, &recordFace), this, menu_selector(ReplayPopupView::onRecord));
+    tabFace("RENDER", 50.f, false, &recordFace), this, menu_selector(ReplayPopupView::onRecord));
   recordButton->setID("record-button"_spr);
   recordMenu->setContentSize(recordButton->getContentSize());
   recordButton->setPosition(

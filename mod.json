@@ -3,7 +3,7 @@
   "gd": { "win": "2.2081" },
   "id": "flafy.showcase",
   "name": "Showcase",
-  "version": "4.0.0",
+  "version": "4.0.0-beta.1",
   "developers": ["Flafy"],
   "description": "Watch verified completions and automatically submit your own successful runs.",
   "dependencies": {
@@ -32,7 +32,8 @@
       "resources/clapper.png",
       "resources/ghost_badge.png",
       "resources/inputs_badge.png",
-      "resources/play_badge.png"
+      "resources/play_badge.png",
+      "resources/clapper_example.png"
     ]
   }
 }

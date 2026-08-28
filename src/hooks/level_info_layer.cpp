@@ -21,7 +21,7 @@ class $modify(ShowcaseLevelInfoLayer, LevelInfoLayer) {
     auto playMenu = m_playBtnMenu;
     if (!playMenu) return true;
 
-    auto icon = CircleButtonSprite::createWithSprite("clapper.png"_spr);
+    auto icon = CircleButtonSprite::createWithSprite("clapper.png"_spr, 0.9f);
     icon->setScale(.5f);
     auto button = CCMenuItemSpriteExtra::create(
       icon, this, menu_selector(ShowcaseLevelInfoLayer::openShowcase));
