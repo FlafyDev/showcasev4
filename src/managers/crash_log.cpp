@@ -16,6 +16,7 @@ namespace showcase {
 
 namespace {
 constexpr size_t MAX_CRASH_LOG_BYTES = 1024 * 1024;
+constexpr char INSTALLED_MODS_HEADER[] = "== Installed Mods ==";
 
 struct CrashLog {
   std::filesystem::path path;
@@ -45,6 +46,11 @@ std::optional<CrashLog> latestCrashLog() {
 
   return latest;
 }
+
+bool referencesShowcase(std::string const& contents) {
+  auto installedMods = contents.find(INSTALLED_MODS_HEADER);
+  return contents.substr(0, installedMods).find(Mod::get()->getID()) != std::string::npos;
+}
 }
 
 CrashLogManager& CrashLogManager::get() {
@@ -70,7 +76,7 @@ void CrashLogManager::checkLatest() {
   if (!input) return;
 
   std::string contents(std::istreambuf_iterator<char>(input), {});
-  if (contents.find(Mod::get()->getID()) == std::string::npos) return;
+  if (!referencesShowcase(contents)) return;
 
   async::spawn(Client::get().crashReport(Mod::get()->getVersion().toVString(), std::move(contents)),
     [](Result<> result) {
