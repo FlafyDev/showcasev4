@@ -1,8 +1,10 @@
 #include "replay_popup.hpp"
+#include <memory>
 
 #include "managers/auth.hpp"
 #include "managers/client.hpp"
-#include "managers/replay.hpp"
+#include "managers/session.hpp"
+#include "utils/gdr2_decode.hpp"
 
 using namespace geode::prelude;
 
@@ -127,7 +129,7 @@ void ReplayPopup::playReplay(size_t index) {
       }
 
       auto bytes = std::move(result).unwrap();
-      auto decoded = ReplayManager::get().decode(bytes);
+      auto decoded = gdr2Decode(bytes);
       if (decoded.isErr()) {
         log::warn("Replay {} for level content {} decode failed: {}", replayID, m_identity.hash,
           decoded.unwrapErr());
@@ -135,7 +137,9 @@ void ReplayPopup::playReplay(size_t index) {
         return;
       }
 
-      ReplayManager::get().queue(std::move(decoded).unwrap());
+      auto replay = std::make_unique<const Replay>(std::move(decoded).unwrap());
+      ReplaySession::queue(std::make_unique<ReplaySession>(std::move(replay), true));
+
       auto play = m_playLevel;
       onClose(nullptr);
       play();

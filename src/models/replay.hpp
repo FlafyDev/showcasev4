@@ -1,10 +1,14 @@
 #pragma once
 
+#include <gdr/gdr.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace showcase {
+
+using Replay = gdr::Replay<>;
 
 struct ReplaySummary {
   std::string id;

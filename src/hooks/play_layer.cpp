@@ -2,9 +2,9 @@
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 
-#include "managers/replay.hpp"
 #include "managers/recorder.hpp"
 #include "managers/report.hpp"
+#include "managers/session.hpp"
 #include "models/level.hpp"
 #include "managers/auth.hpp"
 #include "managers/client.hpp"
@@ -26,18 +26,26 @@ uint32_t replayTick(GJBaseGameLayer const* layer) {
   return layer->m_gameState.m_currentProgress / 2 + 1;
 }
 
+ReplaySession* sessionLayer(GJBaseGameLayer const* layer);
+
 bool isValidLevel(GJBaseGameLayer const* layer) {
   return layer && layer->m_level && layer->m_level->m_levelType == GJLevelType::Saved &&
          !layer->m_level->m_levelNotDownloaded && !layer->m_isPlatformer;
 }
 
 bool shouldRecord(GJBaseGameLayer const* layer) {
-  return Mod::get()->getSettingValue<bool>("auto-submit") && !ReplayManager::get().playing() &&
+  auto* session = sessionLayer(layer);
+  bool autoPlaying = session && session->autoPlay().enabled();
+
+  return Mod::get()->getSettingValue<bool>("auto-submit") && !autoPlaying &&
          AuthManager::get().hasAccount() && isValidLevel(layer) && !layer->m_isPracticeMode;
 }
 
 bool shouldReport(GJBaseGameLayer const* layer) {
-  return Mod::get()->getSettingValue<bool>("share-attempts") && !ReplayManager::get().playing() &&
+  auto* session = sessionLayer(layer);
+  bool autoPlaying = session && session->autoPlay().enabled();
+
+  return Mod::get()->getSettingValue<bool>("share-attempts") && !autoPlaying &&
          AuthManager::get().hasAccount() && isValidLevel(layer);
 }
 
@@ -61,11 +69,12 @@ void submitReplayWrapper(LevelIdentity identity, std::vector<uint8_t> bytes) {
     }
   });
 }
+
 }
 
 class $modify(ShowcaseReplayBaseLayer, GJBaseGameLayer) {
   void handleButton(bool down, int button, bool playerOne) {
-    if (button == 1 && shouldRecord(this) && !ReplayManager::get().playing() && !m_isPracticeMode) {
+    if (button == 1 && shouldRecord(this)) {
       RecorderManager::get().input(replayTick(this), playerOne, down);
     }
     GJBaseGameLayer::handleButton(down, button, playerOne);
@@ -73,28 +82,38 @@ class $modify(ShowcaseReplayBaseLayer, GJBaseGameLayer) {
 
   void processCommands(float dt, bool halfTick, bool lastTick) {
     GJBaseGameLayer::processCommands(dt, halfTick, lastTick);
-    for (auto const& input : ReplayManager::get().inputsAt(replayTick(this))) {
-      GJBaseGameLayer::handleButton(input.down, input.button, !input.player2);
+
+    auto* session = sessionLayer(this);
+    if (!session) return;
+
+    if (session->autoPlay().enabled()) {
+      for (auto const& input : session->autoPlay().inputsAt(replayTick(this))) {
+        GJBaseGameLayer::handleButton(input.down, input.button, !input.player2);
+      }
     }
   }
 };
 
 class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
+  struct Fields {
+    std::unique_ptr<ReplaySession> m_replaySession;
+  };
+
   bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
     ReportManager::get().terminateSession();
-    ReplayManager::get().stop();
     RecorderManager::get().clear();
 
-    auto replaying = ReplayManager::get().queued();
-
-    if (replaying) {
-      seedGame(ReplayManager::get().seed());
+    m_fields->m_replaySession = ReplaySession::takeQueued();
+    if (auto* session = m_fields->m_replaySession.get()) {
+      if (auto& autoPlay = session->autoPlay(); autoPlay.enabled()) {
+        seedGame(autoPlay.seed());
+      }
     }
 
     if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
-    if (replaying) {
-      ReplayManager::get().begin();
+    if (auto* session = m_fields->m_replaySession.get()) {
+      session->attach(this);
     }
 
     return true;
@@ -104,7 +123,8 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
   void onEnterTransitionDidFinish() {
     PlayLayer::onEnterTransitionDidFinish();
 
-    if (ReplayManager::get().playing() && !m_isPracticeMode) {
+    if (auto* session = m_fields->m_replaySession.get();
+      session && session->autoPlay().enabled() && !m_isPracticeMode) {
       togglePracticeMode(true);
     }
   }
@@ -114,7 +134,9 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
       // Cuz no recording on practice mode
       RecorderManager::get().clear();
     } else {
-      ReplayManager::get().stop();
+      if (auto* session = m_fields->m_replaySession.get()) {
+        session->autoPlay().disable();
+      }
     }
 
     PlayLayer::togglePracticeMode(enabled);
@@ -150,7 +172,6 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
         log::warn("Level report was not started: {}", identity.unwrapErr());
       }
     }
-
   }
 
   void levelComplete() {
@@ -174,11 +195,24 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
 
   void onQuit() {
     ReportManager::get().endSession(replayTick(this));
-    ReplayManager::get().stop();
+    m_fields->m_replaySession.reset();
     RecorderManager::get().clear();
 
     PlayLayer::onQuit();
   }
 };
+
+namespace {
+
+ReplaySession* sessionLayer(GJBaseGameLayer const* layer) {
+  auto* playLayer = typeinfo_cast<PlayLayer*>(layer);
+  if (!playLayer) {
+    return nullptr;
+  }
+
+  return modify_cast<ShowcaseReplayPlayLayer*>(playLayer)->m_fields->m_replaySession.get();
+}
+
+}
 
 }

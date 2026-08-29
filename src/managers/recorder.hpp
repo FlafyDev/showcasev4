@@ -1,6 +1,6 @@
 #pragma once
 
-#include "replay.hpp"
+#include "models/replay.hpp"
 
 namespace showcase {
 
