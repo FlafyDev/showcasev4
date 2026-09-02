@@ -1,3 +1,7 @@
+# v4.0.0-beta.2
+
+- Seek a level (with at least 1 Showcase replay) by pressing the progress bar while paused
+
 # v4.0.0-beta.1
 
 - Complete rewrite of the mod and backend.
