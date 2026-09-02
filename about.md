@@ -8,9 +8,9 @@ Interact with the mod through the **Showcase button** added to non-platformer us
 
 - Automatically record all your completions (No CBS support)
 - View completions by other players
+- Teleport to any % in a level by pressing anywhere on the progress bar
 - COMING SOON: Upload GDR2 replays
 - COMING SOON: View a ghost of successful completions
-- COMING SOON: Teleport to any % in the level by pressing the progress bar
 - COMING SOON: Click visualization
 - COMING SOON: Render completions in any resolution, FPS, and quality
 

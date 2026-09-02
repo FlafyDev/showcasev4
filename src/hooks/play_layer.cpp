@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
+#include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 
 #include "managers/recorder.hpp"
@@ -18,6 +19,8 @@ namespace showcase {
 
 namespace {
 // Haven't actually done any research on whether this is what defines all randomness in a level :p
+// I also don't know whether I'm invoking it at the correct times. (For example, I don't know if
+// applying the same seed after restarting causes same level behaviour)
 void seedGame(uint32_t seed) {
   GameToolbox::fast_srand(seed);
 }
@@ -26,15 +29,13 @@ uint32_t replayTick(GJBaseGameLayer const* layer) {
   return layer->m_gameState.m_currentProgress / 2 + 1;
 }
 
-ReplaySession* sessionLayer(GJBaseGameLayer const* layer);
-
 bool isValidLevel(GJBaseGameLayer const* layer) {
   return layer && layer->m_level && layer->m_level->m_levelType == GJLevelType::Saved &&
          !layer->m_level->m_levelNotDownloaded && !layer->m_isPlatformer;
 }
 
 bool shouldRecord(GJBaseGameLayer const* layer) {
-  auto* session = sessionLayer(layer);
+  auto* session = ReplaySession::get();
   bool autoPlaying = session && session->autoPlay().enabled();
 
   return Mod::get()->getSettingValue<bool>("auto-submit") && !autoPlaying &&
@@ -42,7 +43,7 @@ bool shouldRecord(GJBaseGameLayer const* layer) {
 }
 
 bool shouldReport(GJBaseGameLayer const* layer) {
-  auto* session = sessionLayer(layer);
+  auto* session = ReplaySession::get();
   bool autoPlaying = session && session->autoPlay().enabled();
 
   return Mod::get()->getSettingValue<bool>("share-attempts") && !autoPlaying &&
@@ -83,11 +84,17 @@ class $modify(ShowcaseReplayBaseLayer, GJBaseGameLayer) {
   void processCommands(float dt, bool halfTick, bool lastTick) {
     GJBaseGameLayer::processCommands(dt, halfTick, lastTick);
 
-    auto* session = sessionLayer(this);
+    auto* session = ReplaySession::get();
     if (!session) return;
 
+    auto tick = replayTick(this);
+
+    if (auto& seeker = session->seeker(); session->seeker().reachedSeekingTarget()) {
+      seeker.endSeek();
+    }
+
     if (session->autoPlay().enabled()) {
-      for (auto const& input : session->autoPlay().inputsAt(replayTick(this))) {
+      for (auto const& input : session->autoPlay().inputsAt(tick)) {
         GJBaseGameLayer::handleButton(input.down, input.button, !input.player2);
       }
     }
@@ -103,15 +110,9 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
     ReportManager::get().terminateSession();
     RecorderManager::get().clear();
 
-    m_fields->m_replaySession = ReplaySession::takeQueued();
-    if (auto* session = m_fields->m_replaySession.get()) {
-      if (auto& autoPlay = session->autoPlay(); autoPlay.enabled()) {
-        seedGame(autoPlay.seed());
-      }
-    }
-
     if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
 
+    m_fields->m_replaySession = ReplaySession::takeQueued();
     if (auto* session = m_fields->m_replaySession.get()) {
       session->attach(this);
     }
@@ -151,6 +152,10 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
   }
 
   void resetLevel() {
+    if (auto* session = m_fields->m_replaySession.get()) {
+      session->seeker().terminateSeek();
+    }
+
     ReportManager::get().closeSegment(replayTick(this), SegmentOutcome::Restart);
     PlayLayer::resetLevel();
     ReportManager::get().startSegment(replayTick(this), m_isPracticeMode);
@@ -159,9 +164,14 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
     // the beginning.
     if (shouldRecord(this)) {
       // For now, I don't want to apply a seed (when recording) without proper acknowledgement from
-      // the user that a seed is being set. It would also break recordings when restarting the
-      // level, so that needs consideration as well...
+      // the user that a seed is being set.
       RecorderManager::get().start(generateRandomUInt32() & std::numeric_limits<int32_t>::max());
+    }
+
+    if (auto* session = m_fields->m_replaySession.get()) {
+      if (auto& autoPlay = session->autoPlay(); autoPlay.enabled()) {
+        seedGame(autoPlay.seed());
+      }
     }
 
     if (!ReportManager::get().sessionActive() && shouldReport(this)) {
@@ -175,6 +185,10 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
   }
 
   void levelComplete() {
+    if (auto* session = m_fields->m_replaySession.get()) {
+      session->seeker().terminateSeek();
+    }
+
     ReportManager::get().closeSegment(replayTick(this), SegmentOutcome::Completion);
 
     if (RecorderManager::get().recording()) {
@@ -190,6 +204,7 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
         log::warn("Completed replay was not submitted: {}", identity.unwrapErr());
       }
     }
+
     PlayLayer::levelComplete();
   }
 
@@ -202,17 +217,16 @@ class $modify(ShowcaseReplayPlayLayer, PlayLayer) {
   }
 };
 
-namespace {
+ReplaySession* ReplaySession::get() {
+  if (PlayLayer::get() == nullptr) return nullptr;
+  return modify_cast<ShowcaseReplayPlayLayer*>(PlayLayer::get())->m_fields->m_replaySession.get();
+}
 
-ReplaySession* sessionLayer(GJBaseGameLayer const* layer) {
-  auto* playLayer = typeinfo_cast<PlayLayer*>(layer);
-  if (!playLayer) {
-    return nullptr;
+class $modify(ShowcaseReplayPauseLayer, PauseLayer) {
+  void customSetup() {
+    PauseLayer::customSetup();
+    if (auto* session = ReplaySession::get()) session->seeker().onPlayLayerPause(this);
   }
-
-  return modify_cast<ShowcaseReplayPlayLayer*>(playLayer)->m_fields->m_replaySession.get();
-}
-
-}
+};
 
 }

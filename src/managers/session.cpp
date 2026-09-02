@@ -17,11 +17,20 @@ namespace showcase {
 
 std::unique_ptr<ReplaySession> ReplaySession::queued_session;
 
-ReplaySession::ReplaySession(std::unique_ptr<const Replay> replay, bool autoPlayEnabled)
-  : m_replay(std::move(replay)), m_autoPlay(AutoPlayDriver(this, autoPlayEnabled)) {}
+ReplaySession::ReplaySession(Replay replay, bool autoPlayEnabled,
+  bool inputVisualizerEnabled, bool ghostEnabled)
+  : m_replay(std::move(replay)),
+    m_autoPlay(AutoPlayDriver(this, autoPlayEnabled)),
+    m_inputVisualizer(InputVisualizerDriver(this, inputVisualizerEnabled)),
+    m_ghost(GhostDriver(this, ghostEnabled)),
+    m_seeker(SeekerDriver(this, true)) {}
 
 void ReplaySession::queue(std::unique_ptr<ReplaySession> session) {
   queued_session = std::move(session);
+}
+
+bool ReplaySession::hasQueued() {
+  return queued_session != nullptr;
 }
 
 std::unique_ptr<ReplaySession> ReplaySession::takeQueued() {

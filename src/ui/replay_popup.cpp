@@ -137,8 +137,8 @@ void ReplayPopup::playReplay(size_t index) {
         return;
       }
 
-      auto replay = std::make_unique<const Replay>(std::move(decoded).unwrap());
-      ReplaySession::queue(std::make_unique<ReplaySession>(std::move(replay), true));
+      ReplaySession::queue(std::make_unique<ReplaySession>(std::move(decoded).unwrap(),
+        m_view->autoPlayEnabled(), m_view->inputVisualizerEnabled(), m_view->ghostEnabled()));
 
       auto play = m_playLevel;
       onClose(nullptr);

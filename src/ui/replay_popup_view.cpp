@@ -267,15 +267,17 @@ CCNode* ReplayPopupView::buildControls(CCSize size) {
   tools->setID("controls-menu"_spr);
   configureLocalMenu(tools, {112.f, 22.f}, {size.width / 2.f, size.height - 32.f});
   for (int index = 0; index < 3; ++index) {
-    auto button = CCMenuItemToggler::create(controlToggleSprite(index, false),
-      controlToggleSprite(index, true), this, nullptr);
+    auto button =
+      CCMenuItemToggler::create(controlToggleSprite(index, false), controlToggleSprite(index, true),
+        this, index == 0 ? menu_selector(ReplayPopupView::onToggleGhost) : nullptr);
     button->toggle(index == 2);
-    button->setEnabled(false);
+    button->setEnabled(index == 2);
     button->setScale(.72f);
     button->setTag(index);
     button->setID(fmt::format("control-toggle-{}"_spr, index));
     button->setPosition({20.f + index * 36.f, 21.f});
     tools->addChild(button);
+    m_controlButtons[index] = button;
   }
   panel->addChild(tools);
 
@@ -465,10 +467,28 @@ size_t ReplayPopupView::selected() const {
   return m_selected;
 }
 
+bool ReplayPopupView::ghostEnabled() const {
+  return m_controlButtons[0]->isToggled();
+}
+
+bool ReplayPopupView::inputVisualizerEnabled() const {
+  return m_controlButtons[1]->isToggled();
+}
+
+bool ReplayPopupView::autoPlayEnabled() const {
+  return m_controlButtons[2]->isToggled();
+}
+
 void ReplayPopupView::onSelectView(CCObject* sender) {
   auto index = static_cast<CCNode*>(sender)->getTag();
   if (index < 0 || static_cast<size_t>(index) >= views.size()) return;
   if (m_actions.selectView) m_actions.selectView(views[index]);
+}
+
+void ReplayPopupView::onToggleGhost(CCObject* sender) {
+  auto* toggle = static_cast<CCMenuItemToggler*>(sender);
+  // CCMenuItemToggler runs the on-toggle callback before changing m_toggled...
+  m_offset->setVisible(toggle->isEnabled() && !toggle->isToggled());
 }
 
 void ReplayPopupView::onSelectReplay(CCObject* sender) {

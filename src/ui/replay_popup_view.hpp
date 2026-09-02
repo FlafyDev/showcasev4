@@ -29,6 +29,9 @@ class ReplayPopupView final : public cocos2d::CCNode {
     std::string const& levelHash, std::vector<ReplaySummary> replays, size_t selected);
   std::vector<ReplaySummary> const& replays() const;
   size_t selected() const;
+  bool ghostEnabled() const;
+  bool autoPlayEnabled() const;
+  bool inputVisualizerEnabled() const;
 
  private:
   static constexpr std::array<char const*, 5> views{
@@ -43,6 +46,7 @@ class ReplayPopupView final : public cocos2d::CCNode {
   cocos2d::CCNode* m_list = nullptr;
   cocos2d::CCLabelBMFont* m_status = nullptr;
   cocos2d::CCLabelBMFont* m_offset = nullptr;
+  std::array<CCMenuItemToggler*, 3> m_controlButtons{};
   std::vector<ReplaySummary> m_replays;
   size_t m_selected = 0;
 
@@ -53,6 +57,7 @@ class ReplayPopupView final : public cocos2d::CCNode {
     size_t index, std::unordered_set<std::string>& usedCodes);
 
   void onSelectView(cocos2d::CCObject* sender);
+  void onToggleGhost(cocos2d::CCObject* sender);
   void onSelectReplay(cocos2d::CCObject* sender);
   void onVote(cocos2d::CCObject* sender);
   void onPlay(cocos2d::CCObject* sender);
