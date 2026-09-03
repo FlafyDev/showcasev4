@@ -88,7 +88,9 @@ class ProgressBarTouchLayer : public CCLayer {
     if (!percent) return;
 
     m_driver->startSeek(*percent);
-    m_pauseLayer->onResume(nullptr);
+    setTouchEnabled(false);
+    Ref<PauseLayer> pauseLayer = m_pauseLayer;
+    Loader::get()->queueInMainThread([pauseLayer] { pauseLayer->onResume(nullptr); });
   }
 
   void ccTouchCancelled(CCTouch*, CCEvent*) override {
@@ -121,10 +123,11 @@ class ProgressBarTouchLayer : public CCLayer {
   void raiseNode(CCNode* node, NodeHome& home, int zOrder) {
     if (!node) return;
     home = {node, node->getParent(), node->getPosition(), node->getZOrder()};
+    auto worldPosition = home.parent->convertToWorldSpace(home.position);
     node->retain();
     node->removeFromParentAndCleanup(false);
-    m_pauseLayer->addChild(node, zOrder);
-    node->setPosition(home.position);
+    addChild(node, zOrder);
+    node->setPosition(convertToNodeSpace(worldPosition));
     node->release();
   }
 
