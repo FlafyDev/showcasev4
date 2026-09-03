@@ -18,6 +18,8 @@ using namespace geode::prelude;
 namespace showcase {
 
 namespace {
+constexpr int FASTFORWARD_UPDATE_MULTIPLIER = 40;
+
 // Haven't actually done any research on whether this is what defines all randomness in a level :p
 // I also don't know whether I'm invoking it at the correct times. (For example, I don't know if
 // applying the same seed after restarting causes same level behaviour)
@@ -74,6 +76,22 @@ void submitReplayWrapper(LevelIdentity identity, std::vector<uint8_t> bytes) {
 }
 
 class $modify(ShowcaseReplayBaseLayer, GJBaseGameLayer) {
+  void update(float dt) {
+    auto* session = ReplaySession::get();
+    auto updates =
+      session && session->seeker().fastForwarding() ? FASTFORWARD_UPDATE_MULTIPLIER : 1;
+
+    for (int step = 0; step < updates; step++) {
+      if (step > 0) {
+        session = ReplaySession::get();
+        if (static_cast<GJBaseGameLayer*>(PlayLayer::get()) != this || !session ||
+            !session->seeker().fastForwarding())
+          break;
+      }
+      GJBaseGameLayer::update(dt);
+    }
+  }
+
   void handleButton(bool down, int button, bool playerOne) {
     if (button == 1 && shouldRecord(this)) {
       RecorderManager::get().input(replayTick(this), playerOne, down);
