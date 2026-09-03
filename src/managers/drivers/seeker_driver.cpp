@@ -244,10 +244,10 @@ void SeekerDriver::startSeek(float targetPercent) {
   playLayer->removeAllCheckpoints();
   playLayer->resetLevel();
 
-  m_overlay = CCLayerColor::create({0, 0, 0, 190});
+  m_overlay = CCLayerColor::create({20, 20, 22, 190});
   m_overlay->setID("seek-overlay"_spr);
   m_overlay->setContentSize(CCDirector::sharedDirector()->getWinSize());
-  playLayer->addChild(m_overlay, std::numeric_limits<int>::max());
+  playLayer->addChild(m_overlay, playLayer->m_uiLayer->getZOrder() - 1);
 
   m_targetPercent = std::clamp(targetPercent, 0.0f, 100.00f);
   m_seeking = true;
