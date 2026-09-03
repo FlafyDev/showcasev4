@@ -18,7 +18,7 @@ using namespace geode::prelude;
 namespace showcase {
 
 namespace {
-constexpr int FASTFORWARD_UPDATE_MULTIPLIER = 40;
+constexpr float FASTFORWARD_UPDATE_MULTIPLIER = 8.f;
 
 // Haven't actually done any research on whether this is what defines all randomness in a level :p
 // I also don't know whether I'm invoking it at the correct times. (For example, I don't know if
@@ -78,17 +78,16 @@ void submitReplayWrapper(LevelIdentity identity, std::vector<uint8_t> bytes) {
 class $modify(ShowcaseReplayBaseLayer, GJBaseGameLayer) {
   void update(float dt) {
     auto* session = ReplaySession::get();
-    auto updates =
-      session && session->seeker().fastForwarding() ? FASTFORWARD_UPDATE_MULTIPLIER : 1;
+    if (session && session->seeker().fastForwarding()) {
+      dt *= FASTFORWARD_UPDATE_MULTIPLIER;
+    }
 
-    for (int step = 0; step < updates; step++) {
-      if (step > 0) {
-        session = ReplaySession::get();
-        if (static_cast<GJBaseGameLayer*>(PlayLayer::get()) != this || !session ||
-            !session->seeker().fastForwarding())
-          break;
-      }
-      GJBaseGameLayer::update(dt);
+    GJBaseGameLayer::update(dt);
+
+    session = ReplaySession::get();
+    if (static_cast<GJBaseGameLayer*>(PlayLayer::get()) == this && session &&
+        session->seeker().targetCaptured()) {
+      session->seeker().endSeek();
     }
   }
 
@@ -108,7 +107,7 @@ class $modify(ShowcaseReplayBaseLayer, GJBaseGameLayer) {
     auto tick = replayTick(this);
 
     if (auto& seeker = session->seeker(); session->seeker().reachedSeekingTarget()) {
-      seeker.endSeek();
+      seeker.captureTarget();
     }
 
     if (session->autoPlay().enabled()) {

@@ -22,7 +22,8 @@ bool nodeVisible(CCNode* node) {
 
 class ProgressBarTouchLayer : public CCLayer {
  public:
-  static ProgressBarTouchLayer* create(SeekerDriver* driver, PauseLayer* pauseLayer, PlayLayer* playLayer) {
+  static ProgressBarTouchLayer* create(
+    SeekerDriver* driver, PauseLayer* pauseLayer, PlayLayer* playLayer) {
     auto* layer = new ProgressBarTouchLayer();
     if (layer && layer->init()) {
       layer->m_driver = driver;
@@ -59,7 +60,8 @@ class ProgressBarTouchLayer : public CCLayer {
 
   void raiseProgressBar() {
     raiseNode(m_playLayer->m_progressBar, m_barHome, std::numeric_limits<int>::max() - 2);
-    raiseNode(m_playLayer->m_percentageLabel, m_percentageHome, std::numeric_limits<int>::max() - 1);
+    raiseNode(
+      m_playLayer->m_percentageLabel, m_percentageHome, std::numeric_limits<int>::max() - 1);
   }
 
   bool ccTouchBegan(CCTouch* touch, CCEvent*) override {
@@ -102,8 +104,11 @@ class ProgressBarTouchLayer : public CCLayer {
   void update(float) override {
     if (m_touchActive) return;
     auto mouse = geode::cocos::getMousePos();
-    if (percentAt(mouse)) updateIndicator(mouse);
-    else hideIndicator();
+    if (percentAt(mouse)) {
+      updateIndicator(mouse);
+    } else {
+      hideIndicator();
+    }
   }
 
   void onExit() override {
@@ -202,11 +207,16 @@ void SeekerDriver::onPlayLayerPause(PauseLayer* pauseLayer) {
 }
 
 bool SeekerDriver::reachedSeekingTarget() const {
-  return m_seeking && m_session->m_playLayer->getCurrentPercent() >= m_targetPercent;
+  return m_seeking && !m_targetCaptured &&
+         m_session->m_playLayer->getCurrentPercent() >= m_targetPercent;
 }
 
 bool SeekerDriver::seeking() const {
   return m_seeking;
+}
+
+bool SeekerDriver::targetCaptured() const {
+  return m_targetCaptured;
 }
 
 void SeekerDriver::terminateSeek() {
@@ -217,6 +227,7 @@ void SeekerDriver::terminateSeek() {
     m_overlay = nullptr;
   }
   m_seeking = false;
+  m_targetCaptured = false;
 }
 
 bool SeekerDriver::fastForwarding() const {
@@ -242,21 +253,29 @@ void SeekerDriver::startSeek(float targetPercent) {
   m_seeking = true;
 }
 
-void SeekerDriver::endSeek() {
-  if (!m_seeking) return;
+void SeekerDriver::captureTarget() {
+  if (!m_seeking || m_targetCaptured) return;
 
   auto* playLayer = m_session->m_playLayer;
 
   if (auto* checkpoint = playLayer->createCheckpoint()) {
     playLayer->storeCheckpoint(checkpoint);
     playLayer->m_currentCheckpoint = checkpoint;
+    m_targetCaptured = true;
   }
+}
+
+void SeekerDriver::endSeek() {
+  if (!m_seeking || !m_targetCaptured) return;
+
+  auto* playLayer = m_session->m_playLayer;
 
   if (m_overlay) {
     m_overlay->removeFromParent();
     m_overlay = nullptr;
   }
   m_seeking = false;
+  m_targetCaptured = false;
   m_session->autoPlay().disable();
   playLayer->resetLevel();
   // playLayer->GJBaseGameLayer::handleButton(false, 1, true);
